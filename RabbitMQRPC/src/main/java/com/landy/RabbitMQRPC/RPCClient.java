@@ -37,9 +37,9 @@ public class RPCClient implements AutoCloseable {
     }
 
     public String call(String message) throws IOException, InterruptedException {
-        final String corrId = UUID.randomUUID().toString();
+        final String corrId = message;//UUID.randomUUID().toString();
 
-        String replyQueueName = channel.queueDeclare().getQueue();
+        String replyQueueName = "res_queue";//channel.queueDeclare().getQueue();
 
         AMQP.BasicProperties props = new AMQP.BasicProperties
                 .Builder()
@@ -49,10 +49,16 @@ public class RPCClient implements AutoCloseable {
 
         channel.basicPublish("", requestQueueName, props, message.getBytes("UTF-8"));
 
-        final BlockingQueue<String> response = new ArrayBlockingQueue<>(1);
+        return result;
+    }
 
+
+    public String call2(String message) throws IOException, InterruptedException {
+
+        final BlockingQueue<String> response = new ArrayBlockingQueue<>(1);
+        String replyQueueName = "res_queue";
         String ctag = channel.basicConsume(replyQueueName, true, (consumerTag, delivery) -> {
-            if (delivery.getProperties().getCorrelationId().equals(corrId)) {
+            if (delivery.getProperties().getCorrelationId().equals(message)) {
                 response.offer(new String(delivery.getBody(), "UTF-8"));
             }
         }, consumerTag -> {
@@ -67,7 +73,7 @@ public class RPCClient implements AutoCloseable {
                 result = response.poll(5000, TimeUnit.MICROSECONDS);
             }
 
-            //channel.basicCancel(ctag);
+            channel.basicCancel(ctag);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
