@@ -3,11 +3,11 @@ package com.landy.RabbitMQRPC;
 import com.rabbitmq.client.*;
 
 import java.io.IOException;
-import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class RPCClient implements AutoCloseable {
 
@@ -31,7 +31,27 @@ public class RPCClient implements AutoCloseable {
                 String response = fibonacciRpc.call(i_str);
                 System.out.println(" [.] Got '" + response + "'");
             }
-        } catch (IOException | TimeoutException | InterruptedException e) {
+            int index = 0;
+            while(true) {
+                String i_str =  Integer.toString(index);
+                String response = fibonacciRpc.call2(i_str);
+                if(response.equals("3")) {
+                    System.out.println("3333333333333333333333333333");
+                    break;
+                }
+                else if(response.equals("0")) {
+                    System.out.println("0000000000000000000000000000000");
+                }
+                else if(response.equals("1")) {
+                    System.out.println("1111111111111111111111111111111");
+                }
+                else if ( response.equals("1111")){
+                    System.out.println("null");
+                    System.out.println("null");
+                }
+            }
+
+        } catch (NullPointerException | IOException | TimeoutException | InterruptedException e) {
             e.printStackTrace();
         }
     }
@@ -49,28 +69,41 @@ public class RPCClient implements AutoCloseable {
 
         channel.basicPublish("", requestQueueName, props, message.getBytes("UTF-8"));
 
-        return result;
+
+        return message;
     }
 
 
     public String call2(String message) throws IOException, InterruptedException {
-
-        final BlockingQueue<String> response = new ArrayBlockingQueue<>(1);
+        final BlockingQueue<String> response = new ArrayBlockingQueue<>(100);
         String replyQueueName = "res_queue";
+        //channel.queueDeclare(replyQueueName, false, false, false, null);
+        //channel.queuePurge(replyQueueName);
+
         String ctag = channel.basicConsume(replyQueueName, true, (consumerTag, delivery) -> {
-            if (delivery.getProperties().getCorrelationId().equals(message)) {
-                response.offer(new String(delivery.getBody(), "UTF-8"));
-            }
+
+            System.out.println("message : " +  delivery.getProperties().getCorrelationId() + " : ===========================");
+            System.out.println("getbody : " + (new String(delivery.getBody())) + " : ===========================");
+            response.offer(new String(delivery.getBody(), "UTF-8"));
+
+            //if (delivery.getProperties().getCorrelationId().equals(message)) {
+            //    long nn = delivery.getProperties().getBodySize();
+            //    response.offer(new String(delivery.getBody(), "UTF-8"));
+            //}
         }, consumerTag -> {
         });
 
-        String result = null;
+        String result = "1111";
+
         try {
             int count = 0;
-            while(result == null && count < 5) {
-                count++;
-                Thread.sleep(1000);
+            for( int i = 0 ; i < 3 ; i++) {
+                if ( response.size() == 0) {
+                    break;
+                }
                 result = response.poll(5000, TimeUnit.MICROSECONDS);
+
+                System.out.println("result : " + result + " : ===========================");
             }
 
             channel.basicCancel(ctag);
