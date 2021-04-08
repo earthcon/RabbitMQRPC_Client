@@ -25,7 +25,7 @@ public class RPCClient implements AutoCloseable {
 
     public static void main(String[] argv) {
         try (RPCClient fibonacciRpc = new RPCClient()) {
-            for (int i = 0; i < 60; i++) {
+            for (int i = 0; i < 3; i++) {
                 String i_str = Integer.toString(i);
                 System.out.println(" [x] Requesting fib(" + i_str + ")");
                 String response = fibonacciRpc.call(i_str);
@@ -40,6 +40,7 @@ public class RPCClient implements AutoCloseable {
         final String corrId = UUID.randomUUID().toString();
 
         String replyQueueName = channel.queueDeclare().getQueue();
+
         AMQP.BasicProperties props = new AMQP.BasicProperties
                 .Builder()
                 .correlationId(corrId)
@@ -57,8 +58,6 @@ public class RPCClient implements AutoCloseable {
         }, consumerTag -> {
         });
 
-
-
         String result = null;
         try {
             int count = 0;
@@ -68,7 +67,7 @@ public class RPCClient implements AutoCloseable {
                 result = response.poll(5000, TimeUnit.MICROSECONDS);
             }
 
-            channel.basicCancel(ctag);
+            //channel.basicCancel(ctag);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
